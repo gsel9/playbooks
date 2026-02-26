@@ -19,6 +19,9 @@ EMBEDDING_MODEL = "EMBEDDING_MODEL"
 SEARCH_ENDPOINT = "SEARCH_ENDPOINT"
 # The Open AI endpoint at Overview page of the project (Foundry portal)
 OPEN_AI_ENDPOINT = "OPEN_AI_ENDPOINT"
+# Conversation history
+COSMOS_ENDPOINT = "COSMOS_ENDPOINT"
+COSMOS_KEY = "COSMOS_KEY"
 
 
 def load_config() -> None:
