@@ -20,35 +20,26 @@ def finish_reason(response: Any) -> str:
 
 
 def chat_turn(
-    chat_client: Any, 
-    chat_model: str, 
-    messages: List[dict], 
-    rag_params: Any, 
-    user_input: str
-) -> Tuple[str, List[dict]]:    
+    chat_client: Any,
+    chat_model: str,
+    messages: List[dict],
+    rag_params: Any
+) -> str:
     """
-    Single chat turn: take a user_input + history, call model once, return answer + updated history.
+    Single chat turn: call model once and return the answer
     """
-    if not user_input:
-        log.error("No user input")
-        return "Please provide user input", messages
-    
-    # Add user message
-    messages.append({"role": "user", "content": user_input.strip()})        
-
     try:
-        response = request_chat_response(chat_client, chat_model, messages, rag_params)
+        response = request_chat_response(
+            chat_client, chat_model, messages, rag_params
+        )
     except Exception as exc:
         log.error("Error requesting response: %s", exc)
         # Remove the last user message to avoid poisoning the chat history
         messages.pop()
-        return "", messages
+        return
 
     if finish_reason(response) != "stop":
         log.error("Agent error: %s", getattr(response, "error", "<no details>"))
+        return 
 
-    answer = output_text(response)
-    # Append the response to an existing conversation
-    messages.append({"role": "assistant", "content": answer})
-
-    return answer, messages
+    return output_text(response)

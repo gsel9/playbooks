@@ -1,5 +1,10 @@
 # Agentic RAG chat app
 
+## Setup 
+Tutorials for configuring vector search:
+- [Link](https://learn.microsoft.com/en-us/azure/search/search-get-started-portal-import-vectors?tabs=sample-data-storage%2Cmodel-aoai%2Cconnect-data-storage%2Cvectorize-text-aoai%2Cvectorize-images) for portal configuration 
+- [Link](https://learn.microsoft.com/en-us/azure/search/search-get-started-vector?pivots=python) for programmatic configuration 
+
 ## Managing conversation History
 
 Create a Azure Cosmos DB resource. 

@@ -55,5 +55,5 @@ def request_chat_response(chat_client, chat_model, messages, rag_params):
     return chat_client.chat.completions.create(
         model=chat_model,
         messages=messages,
-        extra_body=rag_params
+        #extra_body=rag_params
     )

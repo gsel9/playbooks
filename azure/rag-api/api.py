@@ -5,23 +5,22 @@ from main import run_rag
 
 app = FastAPI()
 
-class Messages(BaseModel):
+class Query(BaseModel):
     """
     Data model for user message and conversation history.
     """
+    user_id: str
+    conv_id: str
     user_input: str
-    prior_messages: List[Dict[str, Any]] | None = None
 
 
-# TODO: Create unique user/session ID to track individual conversation histories
-# TODO: Create DB (cosmos?) to store conversation histories
 @app.post("/ask")
-async def ask_api(messages: Messages) -> Dict:
+async def ask_api(query: Query) -> Dict[str, Any]:
     """
     Endpoint to execute chat loop.
     """
     try:
-        answer = await run_rag(messages.user_input, messages.prior_messages or [])
+        answer = await run_rag(query.user_id, query.conv_id, query.user_input)
         return {"answer": answer}
     except Exception as exc:
         # log.exception("ask_api failed")  # add logging as needed
