@@ -1,0 +1,130 @@
+
+# ----------------------------
+# Custom
+# ----------------------------
+.env
+.env.*
+data/
+*.secret
+secrets/
+
+# ----------------------------
+# OS-specific files
+# ----------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ----------------------------
+# Editor / IDE files
+# ----------------------------
+# VS Code
+.vscode/
+.history/
+
+# JetBrains IDEs (PyCharm, IntelliJ, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Vim
+*.swp
+*.swo
+
+# Emacs
+*~
+
+# ----------------------------
+# Programming languages
+# ----------------------------
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pycache/
+.Python
+.env
+.venv/
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+*.log
+
+# Go
+bin/
+pkg/
+*.exe
+
+# Rust
+target/
+Cargo.lock
+
+# C/C++
+*.o
+*.a
+*.out
+
+# ----------------------------
+# Version control
+# ----------------------------
+*.orig
+
+# ----------------------------
+# Environment & secrets
+# ----------------------------
+.env
+.env.*
+*.secret
+secrets/
+
+# ----------------------------
+# Logs & temp files
+# ----------------------------
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+
+# ----------------------------
+# Misc
+# ----------------------------
+*.bak
+*.backup
+*.swp
+*.swn
+*.swo
+*.tmp
+*.cache
+.cache/

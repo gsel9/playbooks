@@ -1,16 +1,48 @@
 # Grounding a LLM 
 
-Though language models are trained on a vast amount of data, they may not have access to the knowledge you want to make available to your users. To ensure that an agent is grounded on specific data to provide accurate and domain-specific responses, you can use Retrieval Augmented Generation (RAG).
+1. Create a resource group (e.g., rg-seel, Sweden central)
+2. Create a storage account (storageseel01, Sweden central)
+  - Preferred storage type: Blobl storage
+  - Redundancy: LRS
+  - Allow enabling anonymous access on containers 
+3. Create AZ AI Search
+  - Pricing tier: Basic
+4. Create a Foundry resrouce 
+5. In storage account/data storage/containers
+  - create a data container
+  - upload data (eg, pdf files) to this container
+5. In Foundry, model catalog
+  - deploy an embedding model (eg, text-embedding-3-small, max 50 token/minute)
+  - deploy a chat model (eg, gpt-4o)
+6. In AZ AI Search, click import data (new)
+  - Select blob storage -> RAG
+  - Vectorize your text: kind = MS Foudnry
+  - Run indexer to create index
+7. Test index in AI Search/Search management/Indexes 
+8. Update .env in code repo
+9. Run main.py using python
 
-## RAG
+
+Grounding is the process of connecting a large language model’s responses to real, verifiable data or context so it produces accurate, relevant, and trustworthy answers.
+
+Ine specific method of achieving that grounding is by retrieving external information and supplying it to the model in aprocess called RAG.
+
 In general terms, the RAG pattern incorporates the following steps:
 1. Retrieve grounding data based on the initial user-entered prompt
 2. Augment the prompt with grounding data
 3. Use a language model to generate a grounded response 
 
-## Azure Data Storage
+## Retrieval
+A typical workflow to make data searchable is:
+1. Create a data source - define connection details and authentication
+2. Populate the data source
+3. Configure a search mechanism to query the data source 
+
+Requires a Storage Account and Azure AI Search. 
+
+Storage solutions:
 * Azure Blob Storage
-    - Use if unstructured data (PDFs, text, bianries)
+    - Use if unstructured data (PDFs, text, binaries)
     - Cheaper, flexible, and no analytics needed 
 * Azure Data Lake Storage (ADLS) Gen2
     - Built on Blob Storage
@@ -22,60 +54,41 @@ In general terms, the RAG pattern incorporates the following steps:
     - Part of Fabric, acting as a tenant-wide, governed, single logical data lake built on top og Azure Data Lake Storage Gen2
     - Centralizing all enterprise analytics data in one governed hub
     - Creating Lakehouses, Warehouses, Real-Time Analytics and sharing the sae underlying storage
-    - Storing structured/unstructured data, with all tabular data saved as Delta Parquet by default 
+    - Storing structured/unstructured data, with all tabular data saved as Delta Parquet by default  
 
-## Making Data Searchable
-Integrate with *Azure AI Search* to retrieve relevant context for your chat flow:
- - Azure AI Search: Is a retriever that you can include when building a language model application with prompt flow. 
- - Azure AI Search: Allows you to bring your own data, index your data, and query the index to retrieve any information you need.
+Azure AI Search:
+ - Is a retriever that you can include when building a language model application with prompt flow. 
+ - Allows you to bring your own data, index your data, and query the index to retrieve any information you need.
 
-## Creating A Vector Search Index Via Foundry
+## Azure AI Search
+To use Azure AI Search, we need to create an index, indexer, data source, and skillset. Let’s quickly review what is each of those do.
 
-1. https://ai.azure.com/managementCenter/allResources
-2. Create new AI Hub resource. This will automatically create 
-    - Storage account 
-    - Key Vault 
-3. In Storage Account, add data to Blob container 
-4. In Foundry, deploy an embedding model (eg, text-embedding-ada-002)
-5. In azure Portal, create an AI Search resource 
-6. In Foundry, create a new index (use existing Blob storage, AI Search and embedding model)
-    - The index is stored in AI Search/Indexes and can be tested there
-    
-### Creating A RAG CLI Solution
+**Data Source**
+In Azure AI Search, a data source serves as a connection point for indexers. It provides the necessary connection details to enable on-demand or scheduled data refreshes for a target index, pulling data from supported Azure data sources.
 
+**Indexer**
+An indexer automates the process of indexing data from supported Azure data sources, such as Azure Storage, Azure SQL Database, and Azure Cosmos DB, among others. It leverages a predefined data source and index to create an indexing pipeline that extracts, transforms, and serializes the source data before passing it to the search service for ingestion. Additionally, for AI enrichment of images and unstructured text, indexers can incorporate a skillset, which defines the AI processing tasks to be applied during indexing.
 
+**Index**
+A search index represents your searchable content, making it available to the search engine for various operations such as indexing, full-text search, vector search, hybrid search, and filtered queries. The index is defined by a schema, which specifies the structure of the data, including fields, types, and attributes. Once the schema is defined and saved to the Azure AI Search service, data import occurs as a subsequent step to populate the index with content.
 
-### Parking Lot
+**Vector Index Steps**
+- Crack, chunk, and embed the tokens from uploaded data
+    - Cracking: Extracts raw text & metadata from PDFs/Word/etc. 
+    - Chunking: Splits large documents into overlapping chunks to support embeddings. 
+    - Embedding: Use an embedding model to convert each chunk into high‑dimensional semantic vectors
+- Create an Azure Search index
+    - Stores text, metadata and vectors in an Azure Search index with a vector field.
+- Register the index asset
 
+File formats supported by index for cracking and chunking:
+```
+'.txt', '.md', '.html', '.htm', '.py', '.pdf', '.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.json'
+```
 
-### Creating A Search Index Via AZ Portal
-
-Two options:
-- Via Storage account (requires AI Search resource)
-- Via AZ Search (connected to data from Storage Account)
-
-#### Starting from Storage Account
-- See Data Management tab (left) -> AZ AI Search
-- Select AI Search service 
-- Connect to data from storage container
-- Add cognitive skills (requires AZ AI Services deployed in same region)
-- This will create an index and skills.
-
-#### Starting from AZ AI Search
-- Create an index, eg
-    - field: id; type: string; retrievable
-    - field: content; type: string; retrievable; searchable
-    - field: contentVector; type: SingleCollection; retrievable; searchable
-        - Create a search profile
-        - Create a (requires creating an Azure OpenAI resource and deploying an embedding model)
-    - field: url; type: string; retrievable
-    - field: filepath; type: string; retrievable
-    - field: title; type: string; retrievable; searchable
-    - field: meta_json_string; type: string; retrievable
-- Create a skillset
-    - 
-- Create an indexer 
-
+An *index* refers to the core data structure in Azure AI Search. It defines fields, data types, analyzers, and vector configurations to enable text- and vector-based search.
+- A related concept is *indexers*, acting as crawlers that connect to storage sources, extract data, runs AI enrichment (OCR, translation, vectorization), to populate the index. The indexer creates the index.
+A search index describes how your content is organized to make it searchable. A vetor-based index can improve over a text-based index by containint embeddings representing tokens in your data source.
 
 A search index describes how your content is organized to make it searchable.
 An index defines *how* the data will be stored and searched, including
@@ -87,24 +100,27 @@ If using integrated vectorization, you must also define
 * vectorSearch section 
 * A vector field with same dimension as embedding model
 
+There are several ways that information can be queried in an index:
+- Keyword search: Identifies relevant documents or passages based on specific keywords or terms provided as input.
+- Semantic search: Retrieves documents or passages by understanding the meaning of the query and matching it with semantically related content rather than relying solely on exact keyword matches.
+- Vector search: Uses mathematical representations of text (vectors) to find similar documents or passages based on their semantic meaning or context.
+- Hybrid search: Combines different search techniques.
 
+**Skillset**
+A skillset in Azure AI Search is a reusable object that is linked to an indexer. It consists of one or more skills, which apply built-in AI capabilities (such as OCR, natural language processing, or entity recognition) or invoke external custom processing to enrich documents retrieved from an external data source. Skillsets allow you to enhance raw data by extracting meaningful information, transforming it into searchable content, and enabling advanced search and analysis capabilities.
 
+You must specify an embedding model in an Azure AI Search vector field definition because the index needs to know what embedding shape and type it will store (embedding model family, vector dimension, distance metric), while the embedding model in a skillset is used to actually generate those embeddings during indexing.
 
-## Implement RAG in a prompt flow
-After uploading data to Microsoft Foundry and creating an index on your data using the integration with Azure AI Search, you can implement the RAG pattern with Prompt Flow to build a generative AI application.
+You still need an Embedding Skill (skillset) even if you referenced an Azure OpenAI resource and an embedding model when creating the index. When creating an Azure AI Search index, you can define:
+- a vector field
+- a vector search profile
+- a vectorizer that references an Azure OpenAI embedding model
+But the vectorizer only works at query time, not during indexing. The index knows how to vectorize the query (user input). The index does not vectorize your documents automatically. So referencing the OpenAI embedding model in the index does not generate embeddings for your documents.
 
-- Prompt Flow is a development framework for defining flows that orchestrate interactions with an LLM.
-
-A flow begins with one or more inputs, usually a question or prompt entered by a user, and in the case of iterative conversations the chat history to this point. The flow is then defined as a series of connected tools, each of which performs a specific operation on the inputs and other environmental variables. 
-
-Combine RAG and a language model in your application:
-1. Combine user input with chat history 
-2. Get top *n* context results from the Index Lookup tool, running a query against the search index to find relevant information from your data source
-3. The output from the Index Lookup tool, containing the retrieved context, must be parsed into a more suitable format to be used in the prompt you send to the LLM
-4. When constructing the prompt you want to sent to the LLM, you can use variants to represent different prompt contents. 
-5. Finally, you use an LLM node to send the prompt to a language model to generate a response using the relevant context retrieved from your data source. The response from this node is also the output of the entire flow. 
-
-This flow can be deployed and integrated with an application to offer users an agentic experience.
+## Setup 
+Tutorials for configuring vector search:
+- [Link](https://learn.microsoft.com/en-us/azure/search/search-get-started-portal-import-vectors?tabs=sample-data-storage%2Cmodel-aoai%2Cconnect-data-storage%2Cvectorize-text-aoai%2Cvectorize-images) for portal configuration 
+- [Link](https://learn.microsoft.com/en-us/azure/search/search-get-started-vector?pivots=python) for programmatic configuration 
 
 ## Adapting to Enterprise Version
 
@@ -126,81 +142,3 @@ The core building blocks of AI Search are:
 - Vector/hybrid query: 
     - Vector search algorithm (HNSW), similarity metric (cosine), vector profiles
     - Hybrid search combines vector search, keyword search and semantic ranking
-
-
-Note: Creating a Foundry resource in portal.azure is *not* a prerequisite for creating a Foundry AI Hub resource. A Foundry resource acts as a shared model provider for all projects under the hub, including Azure OpenAI, Speech services, Content Safety, shared endpoints for AI models within the hub.
-
-Analogy:
-- Azure AI Hub: The office building (centralized security, identity management, networking)
-- Azure AI Project: A department (workspace for building, e.g., apps)
-- Connections: Utility lines, linking to external resources like Azure OpenAI, AI Search, Blob Storage
-
-When creating a Foundry resource, you build the office building. A resource group shuold be dedicated to AI assets, itolating them from production web apps.
-
-In an enterprise setting, you might want to link an AI Hub to existing services such ass 
-- Storage Account for raw data and artifacts
-- Key vault for secrets and API keys
-- Application Insights for monitoring 
-- Container Registry, required for using Prompt Flow with custom environments
-
-
-
-Common components in a RAG app are 
-- Azure AI Foundry Hub: Central governance unit
-- Storage Account: Used for datasets, promptflow artifacts, project assets
-- Azure AI Search: Enterprise RAG search index engine
-- Azure OpenAI (optional): Base model resource connected to hub
-- Azure Key Vault: Credential/secret store for hub and projects 
-- App Insights/Log Analytics: Central logging + monitoring
-- Container Registry: For custom skills, model deployments
-
-
-Subscription: contoso-prod-ai-subscription
-|
-└── Resource Group: rg-contoso-ai-hub-eus2
-    |
-    ├── Azure AI Hub: contoso-ai-hub
-    |
-    ├── Storage Account: stcontosoaihubeus2
-    |     ├── container: enterprise-docs
-    |     └── container: project-assets
-    |
-    ├── Azure AI Search: search-contoso-ai
-    |
-    ├── Azure OpenAI (Foundry Resource): aoai-contoso
-    |
-    ├── Key Vault: kv-contoso-ai
-    |
-    ├── Application Insights: appinsights-contoso-ai
-    |
-    ├── Container Registry (optional): acr-contoso
-    |
-    └── Projects (created inside Hub via portal)
-          ├── Project HR-RAG
-          ├── Project IT-RAG
-          └── Project Agents-CS
-
-
-Deployed two LLMs:
-- An embedding model
-- A chat completion model 
-
-- Upload data to assets
-- Configure vector index
-- Create Azure AI Search Service (data will be ingested into an index in Azure AI Search)
-- Create vector index (connected to data assets, search service)
-
-**Vector Index Steps**
-- Crack, chunk, and embed the tokens from uploaded data
-    - Cracking: Extracts raw text & metadata from PDFs/Word/etc. 
-    - Chunking: Splits large documents into overlapping chunks to support embeddings. 
-    - Embedding: Use an embedding model to convert each chunk into high‑dimensional semantic vectors
-- Create an Azure Search index
-    - Stores text, metadata and vectors in an Azure Search index with a vector field.
-- Register the index asset
-
-
-File formats supported by index for cracking and chunking:
-```
-'.txt', '.md', '.html', '.htm', '.py', '.pdf', '.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.json'
-```

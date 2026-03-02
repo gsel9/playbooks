@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from main import run_rag
@@ -9,7 +9,6 @@ class Query(BaseModel):
     """
     Data model for user message and conversation history.
     """
-    item_id: str
     user_id: str
     conv_id: str
     user_input: str
@@ -21,12 +20,7 @@ async def ask_api(query: Query) -> Dict[str, Any]:
     Endpoint to execute chat loop.
     """
     try:
-        answer = await run_rag(
-            query.item_id, 
-            query.user_id, 
-            query.conv_id, 
-            query.user_input
-        )
+        answer = await run_rag(query.user_id, query.conv_id, query.user_input)
         return {"answer": answer}
     except Exception as exc:
         # log.exception("ask_api failed")  # add logging as needed

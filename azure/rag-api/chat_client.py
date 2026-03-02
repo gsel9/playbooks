@@ -52,8 +52,10 @@ def get_rag_params(search_url, search_key, index_name, embedding_model):
 
 def request_chat_response(chat_client, chat_model, messages, rag_params):
     """Call chat model"""
+    # The extra_body allows to send Azure‑specific extensions, e.g.,
+    # Azure OpenAI’s built‑in RAG pipeline using Azure AI Search.
     return chat_client.chat.completions.create(
         model=chat_model,
         messages=messages,
-        #extra_body=rag_params
+        extra_body=rag_params
     )

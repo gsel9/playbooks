@@ -5,8 +5,9 @@ from typing import List, Tuple
 import logging
 
 from history_db import is_new_user, get_prior_messages, append_to_history
-from chat_client import create_chat_client, chat_instructions, get_rag_params
+from chat_client import create_chat_client, chat_instructions
 from chat_turn import chat_turn
+from rag import run_vector_search, create_search_client, create_embedding_client
 import config
 
 logging.basicConfig(
@@ -39,10 +40,6 @@ def run_rag(
     chat_client = create_chat_client(open_ai_endpoint, open_ai_key)
     instructions = chat_instructions()
 
-    rag_params = get_rag_params(
-        search_endpoint, search_key, index_name, embedding_model
-    )
-
     if is_new_user(user_id):
         messages = list(instructions)
     else:
@@ -53,10 +50,33 @@ def run_rag(
     # Append user message
     messages_trunc.append({"role": "user", "content": user_input.strip()})
 
-    # Passes a list of messages to Azure OpenAI along with RAG parameters:
-    # - The LLM does see the last k messages affecting the generation phase 
-    # - However, only the final message is sent to the retriever/RAG
-    answer = chat_turn(chat_client, chat_model, messages_trunc, rag_params)
+    search_client = create_search_client(search_endpoint, index_name, search_key)
+    embed_client = create_embedding_client(open_ai_endpoint, open_ai_key)
+
+    # Check retrieval results before calling the chat model
+    results = run_vector_search(search_client, embed_client, embedding_model, user_input)
+
+    assert False, "TODO"
+
+    if bool(results):
+        rag_context = format_docs_for_context(retrieved_docs)
+        messages_trunc.append({
+            "role": "system",
+            "content": f"Use the following information to answer:\n\n{rag_context}"
+        })
+        answer = chat_turn(chat_client, chat_model, messages_trunc, extra_body=None)
+    else:
+        # fallback: general knowledge answer
+        answer = chat_turn(chat_client, chat_model, messages_trunc, extra_body=None)
+
+
+    if use_rag:
+        # Not enough context: only LLM answering
+        answer = chat_turn_with_rag(chat_client, chat_model, messages_trunc)
+    else:
+        # Useful context found: use RAG
+        answer = chat_turn_without_rag(chat_client, chat_model, messages_trunc)
+
     if answer is None:
         return
 
@@ -69,9 +89,9 @@ def run_rag(
 
 
 if __name__ == "__main__":
-    #print(run_rag("000", "user-000", "conv-000", "Give me a one-liner about London"))
+    print(run_rag("000", "user-000", "conv-000", "Give me a one-liner about London"))
     #print(run_rag("000", "user-000", "conv-000", "Please summarize our conversation"))
     #print(run_rag("000", "user-000", "conv-000", "What was the first message I sent you?"))
     # NOTE: Expect this message to fail bc no info in AI Search about Oslo
     # => the retrieval returns no results
-    print(run_rag("000", "user-000", "conv-000", "Tell me about Oslo!"))
+    #print(run_rag("000", "user-000", "conv-000", "Tell me about Oslo!"))

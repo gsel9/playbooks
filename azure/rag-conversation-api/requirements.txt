@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+microsoft-foundry
+azure-ai-projects
+azure-search-documents
+azure-core
+azure-storage-blob
