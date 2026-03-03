@@ -74,13 +74,21 @@ def run_vector_search(
     return "\n".join(results)
     
 
-def format_docs_for_context(docs):
-    blocks = []
-    for d in docs:
-        content = d.get("content") or ""
-        title = d.get("title") or ""
-        blocks.append(f"---\nTitle: {title}\nContent: {content}\n")
-    return "\n".join(blocks)
+def create_context_message(messages: List[Dict], context: str) -> List:
+    """
+    Add retrieved context to (local) message history.
+    """
+    system_context_msg = {
+        "role": "system",
+        "content": (
+            "Here is relevant information from your knowledge base:"
+            f"\n\n{context}\n\n"
+            "Use it to answer the user query."
+        )
+    }
+    messages.append(system_context_msg)
+
+    return messages
 
 
 def build_messages(conversation_history, user_query, rag_context):
