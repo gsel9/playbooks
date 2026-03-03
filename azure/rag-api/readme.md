@@ -39,3 +39,11 @@ This solution supports a multi-turn LLM conversation, but not multi-turn retriev
 Tutorials for configuring vector search:
 - [Link](https://learn.microsoft.com/en-us/azure/search/search-get-started-portal-import-vectors?tabs=sample-data-storage%2Cmodel-aoai%2Cconnect-data-storage%2Cvectorize-text-aoai%2Cvectorize-images) for portal configuration 
 - [Link](https://learn.microsoft.com/en-us/azure/search/search-get-started-vector?pivots=python) for programmatic configuration 
+
+
+## Test the APP
+Run in terminal:
+```
+python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+```
+In browser, go to: http://127.0.0.1:8000/docs

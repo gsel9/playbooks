@@ -5,6 +5,7 @@ from main import run_rag
 
 app = FastAPI()
 
+
 class Query(BaseModel):
     """
     Data model for user message and conversation history.
@@ -15,16 +16,17 @@ class Query(BaseModel):
     user_input: str
 
 
+# TODO: Depends - User authentication
 @app.post("/ask")
 async def ask_api(query: Query) -> Dict[str, Any]:
     """
     Endpoint to execute chat loop.
     """
     try:
-        answer = await run_rag(
-            query.item_id, 
-            query.user_id, 
-            query.conv_id, 
+        answer = run_rag(
+            query.item_id,
+            query.user_id,
+            query.conv_id,
             query.user_input
         )
         return {"answer": answer}
