@@ -5,6 +5,10 @@ create a knowledge base that uses the knowledge source
 to orchestrate agentic retrieval.
 
 NOTE: https://github.com/Azure-Samples/azure-search-python-samples/blob/main/Quickstart-Agentic-Retrieval/quickstart-agentic-retrieval.ipynb
+
+A knowledge source is a reusable reference to source data. The following code defines a knowledge source named earth-knowledge-source that targets the earth-at-night index.
+
+source_data_fields specifies which index fields are included in citation references. This example includes only human-readable fields to avoid lengthy, uninterpretable embeddings in responses.
 """
 
 from azure.search.documents.indexes.models import SearchIndexKnowledgeSource, SearchIndexKnowledgeSourceParameters, SearchIndexFieldReference

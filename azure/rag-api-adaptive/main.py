@@ -64,7 +64,6 @@ def run_rag(
     context = run_vector_search(search_client, embed_client, embedding_model, user_input)
     if bool(context):
         log.info("Inserting context into message history")
-        # Useful context found
         messages = create_context_message(messages, context)
     else:
         log.info("Could not find any relevant context")
@@ -104,4 +103,3 @@ if __name__ == "__main__":
     #print(run_rag("000", "user-000", "conv-000", "Tell me about Oslo!"))
     #print(run_rag("002", "user-002", "conv-002", "Tell me about Oslo!"))
     print(run_rag("002", "user-002", "conv-002", "Give me a one-liner about London"))
-    

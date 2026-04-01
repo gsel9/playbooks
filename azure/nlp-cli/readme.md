@@ -31,3 +31,14 @@ Compared to conversational language understanding capabilities, Q&A is a static 
 - In Azure portal, create a Language Service
 - Sign in to https://language.cognitive.azure.com/
 - Create a new question answering project
+
+## Conversational Language Understanding
+
+Intents and utterances:
+- Utterance: What is the time?; intent: GetTime
+- Utterance: Turn the light on.; intent: TurnOnDevice
+- Utterance: Will I need an umbrella tonight?; intent: GetWeather
+
+1. In the Azure portal, deploy a Language Service to West Europe
+2. Go to https://language.cognitive.azure.com/
+3. Create a project 

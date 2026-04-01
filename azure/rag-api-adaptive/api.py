@@ -15,12 +15,12 @@ class Query(BaseModel):
 
 
 @app.post("/ask")
-async def ask_api(query: Query) -> Dict[str, Any]:
+def ask_api(query: Query) -> Dict[str, Any]:
     """
     Endpoint to execute chat loop.
     """
     try:
-        answer = await run_rag(query.user_id, query.conv_id, query.user_input)
+        answer = run_rag(query.user_id, query.conv_id, query.user_input)
         return {"answer": answer}
     except Exception as exc:
         # log.exception("ask_api failed")  # add logging as needed

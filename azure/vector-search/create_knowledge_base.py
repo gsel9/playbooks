@@ -9,6 +9,10 @@ ANSWER_SYNTHESIS modality for LLM-generated answers
 that cite the retrieved content.
 
 NOTE: https://github.com/Azure-Samples/azure-search-python-samples/blob/main/Quickstart-Agentic-Retrieval/quickstart-agentic-retrieval.ipynb
+
+To target earth-knowledge-source and your gpt-5-mini deployment at query time, you need a knowledge base. The following code defines a knowledge base named earth-knowledge-base.
+
+output_mode is set to ANSWER_SYNTHESIS, enabling natural-language answers that cite the retrieved documents and follow the provided answer_instructions.
 """
 
 from azure.search.documents.indexes.models import KnowledgeBase, KnowledgeBaseAzureOpenAIModel, KnowledgeSourceReference, AzureOpenAIVectorizerParameters, KnowledgeRetrievalOutputMode, KnowledgeRetrievalLowReasoningEffort

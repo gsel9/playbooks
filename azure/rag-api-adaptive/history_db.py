@@ -40,18 +40,14 @@ def is_new_user(user_id: str) -> bool:
         FROM c
         WHERE c.userID = @userID
     """
-    params = [
-        {"name": "@userID", "value": user_id}
-    ]
     database = client.get_database_client(container_name)
     container = database.get_container_client(db_name)
-    
+
     match_user_id = list(container.query_items(
         query=query,
-        parameters=params,
+        parameters=[{"name": "@userID", "value": user_id}],
         enable_cross_partition_query=True
     ))
-
     if bool(match_user_id):
         return False
     return True
@@ -148,6 +144,7 @@ def append_to_history(
 
 if __name__ == "__main__":
     print(is_new_user("user-000"))
+    """
     messages = [
         {"role": "system", "content": "You are a helpful AI assistant."},
         {"role": "user", "content": "Hello! Who are you?"},
@@ -157,3 +154,4 @@ if __name__ == "__main__":
     create_item(s, overwrite=True)
     print(is_new_user("user-000"))
     print(get_prior_messages("user-000", "conv-000")[0]["messages"])
+    """
