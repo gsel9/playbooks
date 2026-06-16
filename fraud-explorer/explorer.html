@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraud Graph Explorer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  background: #f1f5f9;
+  color: #1e293b;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#header {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+#header h1 { font-size: 15px; font-weight: 600; color: #0f172a; }
+#header p  { font-size: 12px; color: #64748b; }
+
+.legend { display: flex; gap: 12px; margin-left: auto; align-items: center; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #64748b; }
+.legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+label.toggle { display: flex; align-items: center; gap: 5px; font-size: 11px;
+               color: #64748b; cursor: pointer; user-select: none; }
+
+#main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+#canvas-wrap {
+  position: relative;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+#graph-canvas { display: block; width: 100%; height: 100%; }
+
+#tooltip {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+#inspector {
+  background: #f8fafc;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+  padding: 2rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.card-title { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+
+#node-header { display: flex; justify-content: space-between; align-items: flex-start; }
+#node-title  { font-size: 15px; font-weight: 600; }
+.badges      { display: flex; gap: 5px; }
+.badge       { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.badge-fraud { background: #fee2e2; color: #991b1b; }
+.badge-legit { background: #eff6ff; color: #1e40af; }
+.badge-test  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.badge-train { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
+.badge-tp    { background: #dcfce7; color: #166534; }
+.badge-tn    { background: #eff6ff; color: #1e40af; }
+.badge-fp    { background: #fef9c3; color: #854d0e; }
+.badge-fn    { background: #fee2e2; color: #991b1b; }
+
+#prob-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 6px; }
+#prob-val  { font-size: 22px; font-weight: 700; }
+#prob-bar-wrap {
+  flex: 1; height: 6px; background: #f1f5f9;
+  border-radius: 3px; overflow: hidden;
+}
+#prob-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+
+.coef-row {
+  display: grid;
+  grid-template-columns: 120px 56px 48px 52px 52px;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 11px;
+}
+.coef-row.header { color: #94a3b8; font-size: 10px; border-bottom: 1px solid #f1f5f9;
+                   padding-bottom: 4px; margin-bottom: 2px; }
+.coef-name  { color: #475569; text-align: right; }
+.coef-bar-cell { position: relative; height: 8px; background: #f8fafc;
+                 border-radius: 2px; overflow: hidden; }
+.coef-bar-fill { position: absolute; top:0; height: 100%; border-radius: 2px; }
+.coef-num   { font-family: "SF Mono", "Fira Code", monospace; text-align: right; }
+.val-num    { font-family: "SF Mono", "Fira Code", monospace; text-align: right; color: #64748b; }
+.contrib-pos { color: #3b82f6; }
+.contrib-neg { color: #f59e0b; }
+.coef-note  { font-size: 10px; color: #94a3b8; margin-top: 6px; padding-top: 6px;
+              border-top: 1px solid #f1f5f9; }
+
+.feat-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.feat-row:not(:last-child) { border-bottom: 1px solid #f8fafc; }
+.feat-label { color: #64748b; }
+.feat-val   { font-family: "SF Mono", "Fira Code", monospace; color: #1e293b; }
+
+#loading {
+  position: absolute; inset: 0;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #64748b;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>Fraud Graph Explorer</h1>
+    <p>Click any node to inspect its features and model prediction</p>
+  </div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 1.5px #3b82f6"></div>
+      Test: low risk
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 1.5px #ef4444"></div>
+      Test: high risk
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#d1d5db"></div>
+      Train legit
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#fca5a5"></div>
+      Train fraud
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="show-train"> Show train nodes
+    </label>
+  </div>
+</div>
+
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="graph-canvas"></canvas>
+    <div id="tooltip"></div>
+    <div id="loading">Loading data…</div>
+  </div>
+  <div id="inspector">
+    <div class="placeholder">Click a node on the graph to inspect it</div>
+  </div>
+</div>
+
+<script>
+let RAW = null;
+let selected = null;
+let hovered  = null;
+let showTrain = false;
+
+const canvas    = document.getElementById("graph-canvas");
+const ctx       = canvas.getContext("2d");
+const wrap      = document.getElementById("canvas-wrap");
+const tooltip   = document.getElementById("tooltip");
+const inspector = document.getElementById("inspector");
+
+async function loadData() {
+  const res = await fetch("/data.json");
+  RAW = await res.json();
+
+  RAW.adjMap = {};
+  for (const [a, b] of RAW.edges) {
+    if (!RAW.adjMap[a]) RAW.adjMap[a] = new Set();
+    if (!RAW.adjMap[b]) RAW.adjMap[b] = new Set();
+    RAW.adjMap[a].add(b);
+    RAW.adjMap[b].add(a);
+  }
+
+  RAW.allNodes  = Object.values(RAW.nodes);
+  RAW.testNodes = RAW.allNodes.filter(n => n.is_test);
+
+  RAW.featStats = {};
+  for (const f of RAW.feature_cols) {
+    const vals = RAW.testNodes.map(n => n.features[f]);
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const std  = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+    RAW.featStats[f] = { mean, std };
+  }
+
+  document.getElementById("loading").style.display = "none";
+  resize();
+  draw();
+}
+
+function resize() {
+  const r = wrap.getBoundingClientRect();
+  canvas.width  = r.width  * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  canvas.style.width  = r.width  + "px";
+  canvas.style.height = r.height + "px";
+  draw();
+}
+
+function toCanvas(x, y) {
+  const pad = 28 * devicePixelRatio;
+  const W = canvas.width, H = canvas.height;
+  return {
+    cx: pad + (x + 1) / 2 * (W - 2 * pad),
+    cy: pad + (1 - (y + 1) / 2) * (H - 2 * pad)
+  };
+}
+
+function probColor(p) {
+  if (p == null) return "#94a3b8";
+  if (p > 0.5) {
+    const t = (p - 0.5) * 2;
+    return `rgb(239,${Math.round(68 - 68 * t)},${Math.round(68 - 68 * t)})`;
+  }
+  const t = p / 0.5;
+  return `rgb(${Math.round(59 + 180 * t)},${Math.round(130 + (68 - 130) * t)},${Math.round(246 - 178 * t)})`;
+}
+
+function draw() {
+  if (!RAW) return;
+  const dpr = devicePixelRatio;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const selId  = selected?.id;
+  const selNbrs = selId != null ? (RAW.adjMap[selId] || new Set()) : new Set();
+
+  for (const [a, b] of RAW.edges) {
+    const na = RAW.nodes[a], nb = RAW.nodes[b];
+    if (!na || !nb) continue;
+    if (!showTrain && !na.is_test && !nb.is_test) continue;
+    const { cx: x1, cy: y1 } = toCanvas(na.x, na.y);
+    const { cx: x2, cy: y2 } = toCanvas(nb.x, nb.y);
+    const hilite = selId != null && (a === selId || b === selId);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = hilite ? "rgba(251,191,36,0.7)" : "rgba(148,163,184,0.15)";
+    ctx.lineWidth   = hilite ? 1.8 * dpr : 0.8 * dpr;
+    ctx.stroke();
+  }
+
+  const nodesToDraw = showTrain ? RAW.allNodes : RAW.allNodes.filter(n => n.is_test);
+  for (const n of nodesToDraw) {
+    const { cx, cy } = toCanvas(n.x, n.y);
+    const isSel = n.id === selId;
+    const isNbr = selNbrs.has(n.id);
+    const isHov = n.id === hovered?.id;
+    const r     = (n.is_test ? 7 : 3.5) * dpr;
+
+    ctx.globalAlpha = (selId != null && !isSel && !isNbr) ? 0.18 : 1;
+
+    const extra = (isSel ? 3.5 : isHov ? 2 : 0) * dpr;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + extra, 0, Math.PI * 2);
+
+    if (isSel) {
+      ctx.fillStyle = "#fbbf24";
+    } else if (!n.is_test) {
+      ctx.fillStyle = n.label === 1 ? "#fca5a5" : "#d1d5db";
+    } else {
+      ctx.fillStyle = probColor(n.prob);
+    }
+    ctx.fill();
+
+    if (n.is_test && !isSel) {
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  if (selected) {
+    const { cx, cy } = toCanvas(selected.x, selected.y);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 13 * dpr, 0, Math.PI * 2);
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth   = 2.5 * dpr;
+    ctx.stroke();
+  }
+}
+
+function nodeAt(mx, my) {
+  const candidates = showTrain ? RAW.allNodes : RAW.allNodes.filter(n => n.is_test);
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const n = candidates[i];
+    const { cx, cy } = toCanvas(n.x, n.y);
+    const cxCss = cx / devicePixelRatio;
+    const cyCss = cy / devicePixelRatio;
+    const r = (n.is_test ? 7 : 3.5) + 3;
+    if ((mx - cxCss) ** 2 + (my - cyCss) ** 2 <= r * r) return n;
+  }
+  return null;
+}
+
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const node = nodeAt(mx, my);
+  hovered = node || null;
+  canvas.style.cursor = node ? "pointer" : "default";
+
+  if (node) {
+    const label = node.is_test
+      ? (node.label === 1 ? "fraud (test)" : "legit (test)")
+      : (node.label === 1 ? "fraud (train)" : "legit (train)");
+    const prob = node.prob != null
+      ? `<span style="color:${node.prob > 0.5 ? '#ef4444' : '#3b82f6'};margin-left:8px">p = ${node.prob.toFixed(3)}</span>`
+      : "";
+    tooltip.innerHTML = `<b>Node ${node.id}</b> · ${label}${prob}`;
+    tooltip.style.display = "block";
+  } else {
+    tooltip.style.display = "none";
+  }
+  draw();
+});
+
+canvas.addEventListener("mouseleave", () => {
+  hovered = null;
+  tooltip.style.display = "none";
+  draw();
+});
+
+canvas.addEventListener("click", e => {
+  const rect = canvas.getBoundingClientRect();
+  const node = nodeAt(e.clientX - rect.left, e.clientY - rect.top);
+  if (node) { selected = node; renderInspector(node); draw(); }
+});
+
+document.getElementById("show-train").addEventListener("change", e => {
+  showTrain = e.target.checked;
+  draw();
+});
+
+window.addEventListener("resize", resize);
+
+function fmt(v) {
+  if (typeof v !== "number") return v;
+  if (Math.abs(v) < 0.001 && v !== 0) return v.toExponential(2);
+  if (Number.isInteger(v)) return v.toString();
+  return v.toFixed(4);
+}
+
+function fmtCoef(v) {
+  return (v >= 0 ? "+" : "") + v.toFixed(3);
+}
+
+function outcomeClass(pred, label) {
+  if (pred === 1 && label === 1) return ["TP", "badge-tp"];
+  if (pred === 0 && label === 0) return ["TN", "badge-tn"];
+  if (pred === 1 && label === 0) return ["FP", "badge-fp"];
+  return ["FN", "badge-fn"];
+}
+
+function renderInspector(n) {
+  const isTest  = n.is_test;
+  const hasPred = n.prob != null;
+  const maxAbsCoef = Math.max(...Object.values(RAW.coefs).map(Math.abs), 0.01);
+  const coefLabel  = RAW.coef_type === "importance" ? "Importance" : "Coefficient";
+
+  let outcomeBadge = "";
+  if (isTest && hasPred) {
+    const [lbl, cls] = outcomeClass(n.pred, n.label);
+    const full = { TP:"True positive", TN:"True negative", FP:"False positive", FN:"False negative" }[lbl];
+    outcomeBadge = `<span class="badge ${cls}">${full}</span>`;
+  }
+
+  let probSection = "";
+  if (isTest && hasPred) {
+    const pct = (n.prob * 100).toFixed(1);
+    const col = n.prob > 0.5 ? "#ef4444" : "#3b82f6";
+    probSection = `
+      <div id="prob-row">
+        <span style="font-size:11px;color:#64748b">Fraud probability</span>
+        <span id="prob-val" style="color:${col}">${pct}%</span>
+        ${outcomeBadge}
+      </div>
+      <div id="prob-bar-wrap">
+        <div id="prob-bar" style="width:${pct}%;background:${col}"></div>
+      </div>`;
+  } else if (!isTest) {
+    probSection = `<div style="font-size:11px;color:#94a3b8;margin-top:4px">Training node — no held-out prediction</div>`;
+  }
+
+  let contribSection = "";
+  if (isTest) {
+    const rows = RAW.feature_cols.map(f => {
+      const coef = RAW.coefs[f] ?? 0;
+      const val  = n.features[f];
+      const { mean, std } = RAW.featStats[f];
+      const contrib = std > 0 ? coef * ((val - mean) / std) : 0;
+      const barW    = Math.abs(coef) / maxAbsCoef * 52;
+      const barColor = coef >= 0 ? "#3b82f6" : "#f59e0b";
+      const contribCls = contrib > 0 ? "contrib-pos" : contrib < 0 ? "contrib-neg" : "";
+      return `
+        <div class="coef-row">
+          <span class="coef-name" title="${f}">${f.replace(/_/g," ")}</span>
+          <div class="coef-bar-cell">
+            <div class="coef-bar-fill" style="width:${barW}px;background:${barColor};${coef>=0?'left:0':'right:0'}"></div>
+          </div>
+          <span class="coef-num" style="color:${barColor}">${fmtCoef(coef)}</span>
+          <span class="val-num">${fmt(val)}</span>
+          <span class="coef-num ${contribCls}">${contrib >= 0 ? "+" : ""}${contrib.toFixed(2)}</span>
+        </div>`;
+    }).join("");
+
+    contribSection = `
+      <div class="card">
+        <div class="card-title">Feature contributions to log-odds</div>
+        <div class="coef-row header">
+          <span class="coef-name">Feature</span>
+          <span style="text-align:center">${coefLabel}</span>
+          <span style="text-align:right">${coefLabel.slice(0,4)}</span>
+          <span style="text-align:right">Value</span>
+          <span style="text-align:right">Contrib</span>
+        </div>
+        ${rows}
+        <div class="coef-note">
+          Contrib = coef × (value − mean) / std.
+          <span style="color:#3b82f6">Blue</span> = toward fraud,
+          <span style="color:#f59e0b">amber</span> = away from fraud.
+        </div>
+      </div>`;
+  }
+
+  const featRows = RAW.feature_cols.map(f => `
+    <div class="feat-row">
+      <span class="feat-label">${f.replace(/_/g, " ")}</span>
+      <span class="feat-val">${fmt(n.features[f])}</span>
+    </div>`).join("");
+
+  inspector.innerHTML = `
+    <div class="card">
+      <div id="node-header">
+        <span id="node-title">Node ${n.id}</span>
+        <div class="badges">
+          <span class="badge ${n.label===1?'badge-fraud':'badge-legit'}">${n.label===1?"Fraud":"Legit"}</span>
+          <span class="badge ${isTest?'badge-test':'badge-train'}">${isTest?"Test":"Train"}</span>
+        </div>
+      </div>
+      ${probSection}
+    </div>
+    ${contribSection}
+    <div class="card">
+      <div class="card-title">Raw features</div>
+      ${featRows}
+    </div>`;
+}
+
+loadData().catch(err => {
+  document.getElementById("loading").textContent = "Error: " + err.message;
+});
+</script>
+</body>
+</html>
